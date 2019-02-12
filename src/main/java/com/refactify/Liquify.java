@@ -27,11 +27,23 @@ public class Liquify {
 
     public static void main(final String[] args) {
         ConversionArguments conversionArguments = parser.parseArguments(args);
-        if(conversionArguments.areValid()) {
+        if (conversionArguments.areValid()) {
             convertDatabaseChangeLog(conversionArguments);
-        }
-        else {
+        } else {
             usagePrinter.printUsage();
+        }
+    }
+
+    public static void convertDatabaseChangeLog(String source, String type, String database) {
+        ConversionArguments conversionArguments = new ConversionArguments(
+                source,
+                ConversionArguments.ConversionType.fromString(type),
+                database
+        );
+        if (conversionArguments.areValid()) {
+            convertDatabaseChangeLog(conversionArguments);
+        } else {
+            throw new Error("Invalid conversion arguments");
         }
     }
 
@@ -46,16 +58,13 @@ public class Liquify {
                 set.setFilePath(targetFileName);
             }
             serializer.write(changeLog.getChangeSets(), new FileOutputStream(targetFileName));
-        }
-        catch (LiquibaseException e) {
+        } catch (LiquibaseException e) {
             System.out.println("There was a problem parsing the source file.");
             deleteTargetFile(targetFileName);
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             System.out.println("There was a problem serializing the source file.");
             deleteTargetFile(targetFileName);
-        }
-        catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             System.out.println(String.format("Database generator for type '%s' was not found.",
                     conversionArguments.getDatabase()));
             deleteTargetFile(targetFileName);
@@ -65,8 +74,7 @@ public class Liquify {
     private static void deleteTargetFile(final String targetFileName) {
         try {
             Files.deleteIfExists(Paths.get(targetFileName));
-        }
-        catch (IOException ioe) {
+        } catch (IOException ioe) {
             ioe.printStackTrace();
         }
     }

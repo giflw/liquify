@@ -9,6 +9,15 @@ public class ConversionArguments {
             new String[] {"db2", "derby", "firebird", "h2", "hsql", "informix", "mssql", "mariadb", "mysql", "oracle",
                     "postgresql", "sqlite", "asany", "sybase"};
 
+    public ConversionArguments() {
+    }
+
+    public ConversionArguments(String source, ConversionType type, String database) {
+        this.source = source;
+        this.type = type;
+        this.database = database;
+    }
+
     public String getSource() {
         return source;
     }
