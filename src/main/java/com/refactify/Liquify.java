@@ -19,6 +19,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
 public class Liquify {
     private final static ConversionArgumentsParser parser = new ConversionArgumentsParser();
@@ -27,10 +30,9 @@ public class Liquify {
 
     public static void main(final String[] args) {
         ConversionArguments conversionArguments = parser.parseArguments(args);
-        if(conversionArguments.areValid()) {
+        if (conversionArguments.areValid()) {
             convertDatabaseChangeLog(conversionArguments);
-        }
-        else {
+        } else {
             usagePrinter.printUsage();
         }
     }
@@ -42,20 +44,27 @@ public class Liquify {
             ChangeLogParser parser = ChangeLogParserFactory.getInstance().getParser(conversionArguments.getSource(), resourceAccessor);
             DatabaseChangeLog changeLog = parser.parse(conversionArguments.getSource(), new ChangeLogParameters(), resourceAccessor);
             ChangeLogSerializer serializer = ChangeLogSerializerFactory.getInstance().getSerializer(targetFileName);
-            for (ChangeSet set : changeLog.getChangeSets()) {
-                set.setFilePath(targetFileName);
+
+            // make sure only changesets targeting provided database are serialized
+            List<ChangeSet> changeSets = new LinkedList<>();
+            for(ChangeSet set: changeLog.getChangeSets()){
+                Set<String> dbmsSet = set.getDbmsSet();
+                if (dbmsSet == null || dbmsSet.isEmpty() || dbmsSet.contains(conversionArguments.getDatabase())) {
+                    changeSets.add(set);
+                }
             }
-            serializer.write(changeLog.getChangeSets(), new FileOutputStream(targetFileName));
-        }
-        catch (LiquibaseException e) {
+
+            for (ChangeSet set : changeSets) {
+                    set.setFilePath(targetFileName);
+            }
+            serializer.write(changeSets, new FileOutputStream(targetFileName));
+        } catch (LiquibaseException e) {
             System.out.println("There was a problem parsing the source file.");
             deleteTargetFile(targetFileName);
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             System.out.println("There was a problem serializing the source file.");
             deleteTargetFile(targetFileName);
-        }
-        catch(IllegalStateException e) {
+        } catch (IllegalStateException e) {
             System.out.println(String.format("Database generator for type '%s' was not found.",
                     conversionArguments.getDatabase()));
             deleteTargetFile(targetFileName);
@@ -65,8 +74,7 @@ public class Liquify {
     private static void deleteTargetFile(final String targetFileName) {
         try {
             Files.deleteIfExists(Paths.get(targetFileName));
-        }
-        catch (IOException ioe) {
+        } catch (IOException ioe) {
             ioe.printStackTrace();
         }
     }
